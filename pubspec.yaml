@@ -36,7 +36,6 @@ dependencies:
   # Notifikasi lokal: budget 80%/100%, tagihan terjadwal, jatuh tempo utang.
   flutter_local_notifications: ^19.4.0
   timezone: ^0.10.1
-  flutter_timezone: ^1.0.8
 
 flutter:
   uses-material-design: true

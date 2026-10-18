@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -21,8 +20,15 @@ class NotificationService {
     if (_ready) return;
     tzdata.initializeTimeZones();
     try {
-      final name = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(name));
+      // Deteksi zona dari offset UTC (tanpa plugin native).
+      // Untuk Indonesia: WIB=7, WITA=8, WIT=9.
+      final offsetHours = DateTime.now().timeZoneOffset.inHours;
+      const offsetToZone = {
+        7: 'Asia/Jakarta',
+        8: 'Asia/Makassar',
+        9: 'Asia/Jayapura',
+      };
+      tz.setLocalLocation(tz.getLocation(offsetToZone[offsetHours] ?? 'Asia/Jakarta'));
     } catch (_) {
       // Fallback: UTC bila nama zona tidak dikenali.
     }
