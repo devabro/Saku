@@ -1,0 +1,39 @@
+name: saku
+description: "Saku - aplikasi budgeting pribadi, local-first, tanpa iklan."
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management (tanpa codegen — cukup flutter pub get).
+  flutter_riverpod: ^2.6.1
+
+  # Penyimpanan lokal (SQLite). Semua data fase 1 tinggal di sini.
+  sqflite: ^2.4.2
+  path: ^1.9.0
+  path_provider: ^2.1.5
+
+  # Grafik dashboard.
+  fl_chart: ^0.69.2
+
+  # Foto struk (disimpan di app documents dir, bukan cloud).
+  image_picker: ^1.1.2
+
+  # Format mata uang IDR.
+  intl: ^0.20.2
+
+  # Tombol "Tanya Kuncung": bagikan ringkasan bulan sebagai teks.
+  share_plus: ^11.1.0
+
+flutter:
+  uses-material-design: true
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

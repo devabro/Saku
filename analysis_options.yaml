@@ -1,0 +1,17 @@
+# Lints untuk Saku. Basis: flutter_lints (recommended).
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+
+linter:
+  rules:
+    # Kutip tunggal biar konsisten di seluruh codebase.
+    prefer_single_quotes: true
