@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Notifikasi lokal (Android 13+ butuh izin runtime; plugin meminta
+         otomatis saat inisialisasi). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Saku"
         android:name="${applicationName}"
