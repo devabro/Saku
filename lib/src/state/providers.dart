@@ -8,9 +8,11 @@ import '../logic/insight_engine.dart';
 import '../logic/money.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
+import '../models/debt.dart';
 import '../models/goal.dart';
 import '../models/recurring.dart';
 import '../models/transaction.dart';
+import '../models/upcoming.dart';
 import '../models/wallet.dart';
 import '../services/ocr_service.dart';
 
@@ -31,12 +33,14 @@ final activeMonthProvider = StateProvider<String>((ref) => monthKey(DateTime.now
 // ============ Preferensi (persist di tabel meta) ============
 
 class _MetaBoolController extends StateNotifier<bool> {
-  _MetaBoolController(this._repo, this._key) : super(false);
+  _MetaBoolController(this._repo, this._key, {bool defaultValue = false})
+      : super(defaultValue);
   final Repository _repo;
   final String _key;
 
   Future<void> load() async {
-    state = (await _repo.getMeta(_key)) == '1';
+    final v = await _repo.getMeta(_key);
+    if (v != null) state = v == '1';
   }
 
   Future<void> set(bool v) async {
@@ -80,6 +84,24 @@ final onboardingDoneProvider = FutureProvider<bool>((ref) async {
   return (await repo.getMeta('onboarding_done')) == '1';
 });
 
+/// Kunci biometrik saat aplikasi dibuka.
+final biometricLockProvider =
+    StateNotifierProvider<_MetaBoolController, bool>((ref) {
+  return _MetaBoolController(ref.watch(repositoryProvider), 'biometric_lock');
+});
+
+/// Toggle notifikasi (default nyala semua).
+StateNotifierProvider<_MetaBoolController, bool> _notifProvider(String key) =>
+    StateNotifierProvider<_MetaBoolController, bool>((ref) {
+      return _MetaBoolController(ref.watch(repositoryProvider), key,
+          defaultValue: true);
+    });
+
+final notifBudgetProvider = _notifProvider('notif_budget');
+final notifUpcomingProvider = _notifProvider('notif_upcoming');
+final notifDebtProvider = _notifProvider('notif_debt');
+final notifDailyProvider = _notifProvider('notif_daily');
+
 // ============ Data ============
 
 final walletsProvider = FutureProvider<List<Wallet>>((ref) {
@@ -109,6 +131,22 @@ final recurringsProvider = FutureProvider<List<Recurring>>((ref) {
   return ref.watch(repositoryProvider).getRecurrings();
 });
 
+final debtsProvider = FutureProvider<List<Debt>>((ref) {
+  return ref.watch(repositoryProvider).getDebts();
+});
+
+final upcomingProvider = FutureProvider<List<UpcomingTx>>((ref) {
+  return ref.watch(repositoryProvider).getUpcoming();
+});
+
+final allBudgetsProvider = FutureProvider<List<Budget>>((ref) {
+  return ref.watch(repositoryProvider).getAllBudgets();
+});
+
+final titleMemoryProvider = FutureProvider<Map<String, String>>((ref) {
+  return ref.watch(repositoryProvider).getTitleMemory();
+});
+
 final netWorthProvider = FutureProvider<int>((ref) {
   return ref.watch(repositoryProvider).netWorth();
 });
@@ -132,8 +170,12 @@ void invalidateAll(WidgetRef ref) {
   ref.invalidate(categoriesProvider);
   ref.invalidate(transactionsProvider);
   ref.invalidate(budgetsProvider);
+  ref.invalidate(allBudgetsProvider);
   ref.invalidate(goalsProvider);
   ref.invalidate(recurringsProvider);
+  ref.invalidate(debtsProvider);
+  ref.invalidate(upcomingProvider);
+  ref.invalidate(titleMemoryProvider);
   ref.invalidate(netWorthProvider);
   ref.invalidate(healthProvider);
   ref.invalidate(insightsProvider);

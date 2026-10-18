@@ -39,18 +39,44 @@ class Category {
     'work': Icons.work,
     'card_giftcard': Icons.card_giftcard,
     'add_circle': Icons.add_circle,
+    // Tambahan untuk kategori custom.
+    'home': Icons.home,
+    'pets': Icons.pets,
+    'sports_soccer': Icons.sports_soccer,
+    'flight': Icons.flight,
+    'phone_android': Icons.phone_android,
+    'fitness_center': Icons.fitness_center,
+    'cafe': Icons.local_cafe,
+    'book': Icons.book,
+    'music_note': Icons.music_note,
+    'child_care': Icons.child_care,
+    'celebration': Icons.celebration,
+    'handyman': Icons.handyman,
+    'eco': Icons.eco,
+    'favorite': Icons.favorite,
+    'star': Icons.star,
   };
+
+  /// Daftar iconKey yang bisa dipilih pengguna saat bikin kategori custom.
+  static List<String> get availableIconKeys => _icons.keys.toList();
 
   IconData get icon => _icons[iconKey] ?? Icons.category_outlined;
 
   Color get color => Color(colorValue);
 
-  Category copyWith({bool? enabled, String? name}) => Category(
+  Category copyWith({
+    bool? enabled,
+    String? name,
+    String? iconKey,
+    int? colorValue,
+    CategoryKind? kind,
+  }) =>
+      Category(
         id: id,
         name: name ?? this.name,
-        iconKey: iconKey,
-        colorValue: colorValue,
-        kind: kind,
+        iconKey: iconKey ?? this.iconKey,
+        colorValue: colorValue ?? this.colorValue,
+        kind: kind ?? this.kind,
         enabled: enabled ?? this.enabled,
       );
 

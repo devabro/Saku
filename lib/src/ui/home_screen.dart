@@ -6,13 +6,14 @@ import '../models/transaction.dart';
 import '../state/providers.dart';
 import 'budgets_screen.dart';
 import 'dashboard_screen.dart';
+import 'debts_screen.dart';
 import 'goals_screen.dart';
 import 'quick_add_sheet.dart';
 import 'settings_screen.dart';
 import 'transactions_screen.dart';
 import 'wallets_screen.dart';
 
-/// Navigasi utama: 5 tab + FAB quick-add.
+/// Navigasi utama: 6 tab + FAB quick-add.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -29,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     BudgetsScreen(),
     GoalsScreen(),
     WalletsScreen(),
+    DebtsScreen(),
   ];
 
   void _quickAdd({TransactionType? type}) {
@@ -41,9 +43,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  /// FAB mengikuti tab aktif: Catat / Target / Transfer.
+  /// FAB mengikuti tab aktif: Catat / Budget / Target / Transfer / Utang.
   Widget _fab() {
     switch (_index) {
+      case 2:
+        return FloatingActionButton.extended(
+          onPressed: () async {
+            await showBudgetEditor(context, ref, null);
+            invalidateAll(ref);
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Budget'),
+        );
       case 3:
         return FloatingActionButton.extended(
           onPressed: () async {
@@ -59,6 +70,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _quickAdd(type: TransactionType.transfer),
           icon: const Icon(Icons.swap_horiz),
           label: const Text('Transfer'),
+        );
+      case 5:
+        return FloatingActionButton.extended(
+          onPressed: () => showDebtEditor(context, ref),
+          icon: const Icon(Icons.add),
+          label: const Text('Utang'),
         );
       default:
         return FloatingActionButton.extended(
@@ -117,6 +134,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon: Icon(Icons.wallet_outlined),
               selectedIcon: Icon(Icons.wallet),
               label: 'Dompet'),
+          NavigationDestination(
+              icon: Icon(Icons.handshake_outlined),
+              selectedIcon: Icon(Icons.handshake),
+              label: 'Utang'),
         ],
       ),
     );

@@ -30,6 +30,14 @@ dependencies:
   # Tombol "Tanya Kuncung": bagikan ringkasan bulan sebagai teks.
   share_plus: ^11.1.0
 
+  # Kunci biometrik (sidik jari / PIN perangkat sebagai fallback).
+  local_auth: ^2.3.0
+
+  # Notifikasi lokal: budget 80%/100%, tagihan terjadwal, jatuh tempo utang.
+  flutter_local_notifications: ^19.4.0
+  timezone: ^0.10.1
+  flutter_timezone: ^1.0.8
+
 flutter:
   uses-material-design: true
 
