@@ -32,6 +32,17 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Ensure Gradle wrapper jar
+        run: |
+          JAR="android/gradle/wrapper/gradle-wrapper.jar"
+          if [ ! -s "$JAR" ]; then
+            echo "Wrapper jar missing, downloading..."
+            mkdir -p android/gradle/wrapper
+            curl -L -o "$JAR" "https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar"
+          fi
+          ls -lh "$JAR"
+          unzip -l "$JAR" | grep -q "GradleWrapperMain.class" && echo "Wrapper jar OK" || (echo "Wrapper jar INVALID" && exit 1)
+
       - name: Run tests
         run: flutter test
 
