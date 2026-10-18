@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../logic/money.dart';
+import '../logic/tx_filter.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../models/wallet.dart';
 import '../state/providers.dart';
 import 'quick_add_sheet.dart';
 
-/// Daftar transaksi: filter bulan (ikut bulan aktif global), cari,
-/// edit, hapus (geser).
+/// Daftar transaksi: cari + filter lengkap (tanggal, kategori, dompet,
+/// tipe, nominal), edit, hapus (geser).
 class TransactionsScreen extends ConsumerStatefulWidget {
   const TransactionsScreen({super.key});
 
@@ -18,7 +20,17 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
-  String _query = '';
+  TxFilter _filter = const TxFilter();
+
+  int get _activeCount {
+    var n = 0;
+    if (_filter.from != null || _filter.to != null) n++;
+    if (_filter.categoryId != null) n++;
+    if (_filter.walletId != null) n++;
+    if (_filter.type != null) n++;
+    if (_filter.minAmount != null || _filter.maxAmount != null) n++;
+    return n;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,14 +43,32 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: TextField(
-            decoration: const InputDecoration(
-              hintText: 'Cari transaksi...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            onChanged: (v) => setState(() => _query = v.toLowerCase()),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'Cari transaksi...',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (v) => setState(
+                      () => _filter = _filter.copyWith(query: v)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Badge(
+                isLabelVisible: _activeCount > 0,
+                label: Text('$_activeCount'),
+                child: IconButton.filledTonal(
+                  tooltip: 'Filter',
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: () =>
+                      _openFilter(context, ref),
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -61,23 +91,34 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
+  Future<void> _openFilter(BuildContext context, WidgetRef ref) async {
+    final cats = await ref.read(categoriesProvider.future);
+    final wallets = await ref.read(walletsProvider.future);
+    if (!context.mounted) return;
+    final result = await showModalBottomSheet<TxFilter>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          _FilterSheet(initial: _filter, categories: cats, wallets: wallets),
+    );
+    if (result != null) setState(() => _filter = result);
+  }
+
   Widget _list(BuildContext context, WidgetRef ref, List<SakuTransaction> txs,
-      List<Category> cats, List wallets) {
+      List<Category> cats, List<Wallet> ws) {
     final names = {for (final c in cats) c.id: c.name};
     final icons = {for (final c in cats) c.id: c.icon};
     final colors = {for (final c in cats) c.id: c.color};
-    final wnames = {for (final w in wallets) w.id: w.name};
+    final wnames = {for (final w in ws) w.id: w.name};
 
-    final filtered = txs.where((t) {
-      if (_query.isEmpty) return true;
-      final inNote = t.note.toLowerCase().contains(_query);
-      final inCat = (names[t.categoryId] ?? '').toLowerCase().contains(_query);
-      return inNote || inCat;
-    }).toList();
+    final filtered = _filter.apply(txs, names);
 
     if (filtered.isEmpty) {
-      return const Center(
-          child: Text('Belum ada transaksi.\nPencet "Catat" buat mulai.',
+      return Center(
+          child: Text(
+              _filter.isActive
+                  ? 'Tidak ada transaksi yang cocok filter.'
+                  : 'Belum ada transaksi.\nPencet "Catat" buat mulai.',
               textAlign: TextAlign.center));
     }
 
@@ -187,5 +228,200 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       '', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
     ];
     return '${days[d.weekday]}, ${d.day}/${d.month}/${d.year}';
+  }
+}
+
+/// Bottom sheet filter transaksi.
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet(
+      {required this.initial,
+      required this.categories,
+      required this.wallets});
+  final TxFilter initial;
+  final List<Category> categories;
+  final List<Wallet> wallets;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late TxFilter _f;
+  final _min = TextEditingController();
+  final _max = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _f = widget.initial;
+    if (_f.minAmount != null) _min.text = '${_f.minAmount}';
+    if (_f.maxAmount != null) _max.text = '${_f.maxAmount}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Filter transaksi',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const Spacer(),
+                TextButton(
+                  onPressed: () =>
+                      Navigator.pop(context, const TxFilter()),
+                  child: const Text('Reset'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Rentang tanggal.
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 18),
+                    label: Text(_f.from == null
+                        ? 'Dari tanggal'
+                        : '${_f.from!.day}/${_f.from!.month}/${_f.from!.year}'),
+                    onPressed: () async {
+                      final p = await showDatePicker(
+                        context: context,
+                        initialDate: _f.from ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (p != null) {
+                        setState(() => _f = _f.copyWith(
+                            from: () => DateTime(
+                                p.year, p.month, p.day)));
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today, size: 18),
+                    label: Text(_f.to == null
+                        ? 'Sampai tanggal'
+                        : '${_f.to!.day}/${_f.to!.month}/${_f.to!.year}'),
+                    onPressed: () async {
+                      final p = await showDatePicker(
+                        context: context,
+                        initialDate: _f.to ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (p != null) {
+                        setState(() => _f = _f.copyWith(
+                            to: () => DateTime(
+                                p.year, p.month, p.day, 23, 59, 59)));
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Tipe.
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Semua tipe'),
+                  selected: _f.type == null,
+                  onSelected: (_) =>
+                      setState(() => _f = _f.copyWith(type: () => null)),
+                ),
+                for (final t in TransactionType.values)
+                  ChoiceChip(
+                    label: Text(t.label),
+                    selected: _f.type == t,
+                    onSelected: (_) =>
+                        setState(() => _f = _f.copyWith(type: () => t)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _f.categoryId,
+              decoration:
+                  const InputDecoration(labelText: 'Kategori (semua)'),
+              items: [
+                const DropdownMenuItem(
+                    value: null, child: Text('Semua kategori')),
+                for (final c in widget.categories)
+                  DropdownMenuItem(
+                      value: c.id, child: Text(c.name)),
+              ],
+              onChanged: (v) => setState(
+                  () => _f = _f.copyWith(categoryId: () => v)),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _f.walletId,
+              decoration:
+                  const InputDecoration(labelText: 'Dompet (semua)'),
+              items: [
+                const DropdownMenuItem(
+                    value: null, child: Text('Semua dompet')),
+                for (final w in widget.wallets)
+                  DropdownMenuItem(
+                      value: w.id, child: Text(w.name)),
+              ],
+              onChanged: (v) => setState(
+                  () => _f = _f.copyWith(walletId: () => v)),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _min,
+                    decoration: const InputDecoration(
+                        labelText: 'Min (Rp)', prefixText: 'Rp '),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _max,
+                    decoration: const InputDecoration(
+                        labelText: 'Maks (Rp)', prefixText: 'Rp '),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  final min = parseIdrInput(_min.text);
+                  final max = parseIdrInput(_max.text);
+                  Navigator.pop(
+                      context,
+                      _f.copyWith(
+                        minAmount: () => min > 0 ? min : null,
+                        maxAmount: () => max > 0 ? max : null,
+                      ));
+                },
+                child: const Text('Terapkan'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

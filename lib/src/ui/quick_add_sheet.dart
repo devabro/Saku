@@ -7,8 +7,10 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../logic/money.dart';
+import '../logic/title_memory.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../models/upcoming.dart';
 import '../state/providers.dart';
 
 /// Quick-add: nominal + kategori + dompet + catatan.
@@ -36,6 +38,12 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   DateTime _date = DateTime.now();
   String? _receiptPath;
   bool _saving = false;
+  // Terjadwal: catat sekarang, jadi transaksi saat ditandai dibayar.
+  bool _schedule = false;
+  DateTime _dueDate = DateTime.now().add(const Duration(days: 1));
+  bool _remind = true;
+  // Saran kategori dari memori judul.
+  String? _suggestedCategoryId;
 
   @override
   void initState() {
@@ -110,22 +118,96 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     }
     setState(() => _saving = true);
     final repo = ref.read(repositoryProvider);
-    final tx = SakuTransaction(
-      id: widget.edit?.id ?? newId(),
-      type: _type,
-      amount: amount,
-      categoryId: _type == TransactionType.transfer ? null : _categoryId,
-      walletId: _walletId!,
-      toWalletId: _type == TransactionType.transfer ? _toWalletId : null,
-      note: _note.text.trim(),
-      date: DateTime(_date.year, _date.month, _date.day, DateTime.now().hour,
-          DateTime.now().minute),
-      receiptPath: _receiptPath,
-      recurringId: widget.edit?.recurringId,
-    );
-    await repo.saveTransaction(tx);
+    if (_schedule && widget.edit == null) {
+      // Simpan sebagai terjadwal — belum memengaruhi saldo.
+      await repo.saveUpcoming(UpcomingTx(
+        id: newId(),
+        type: _type == TransactionType.transfer
+            ? TransactionType.expense
+            : _type,
+        amount: amount,
+        categoryId: _type == TransactionType.transfer ? null : _categoryId,
+        walletId: _walletId!,
+        note: _note.text.trim(),
+        dueDate: _dueDate,
+        remind: _remind,
+        createdAt: DateTime.now(),
+      ));
+    } else {
+      final tx = SakuTransaction(
+        id: widget.edit?.id ?? newId(),
+        type: _type,
+        amount: amount,
+        categoryId: _type == TransactionType.transfer ? null : _categoryId,
+        walletId: _walletId!,
+        toWalletId: _type == TransactionType.transfer ? _toWalletId : null,
+        note: _note.text.trim(),
+        date: DateTime(_date.year, _date.month, _date.day,
+            DateTime.now().hour, DateTime.now().minute),
+        receiptPath: _receiptPath,
+        recurringId: widget.edit?.recurringId,
+      );
+      await repo.saveTransaction(tx);
+    }
     if (!mounted) return;
     Navigator.of(context).pop(true);
+  }
+
+  /// Cek memori judul tiap catatan berubah; tampilkan saran kategori.
+  void _onNoteChanged(String v) {
+    final memory = ref.read(titleMemoryProvider).valueOrNull;
+    if (memory == null || v.trim().length < 3) {
+      if (_suggestedCategoryId != null) {
+        setState(() => _suggestedCategoryId = null);
+      }
+      return;
+    }
+    final sug = TitleMemory.suggest(memory, v);
+    if (sug != _suggestedCategoryId && sug != _categoryId) {
+      setState(() => _suggestedCategoryId = sug);
+    } else if (sug == null && _suggestedCategoryId != null) {
+      setState(() => _suggestedCategoryId = null);
+    }
+  }
+
+  Widget _suggestionChip() {
+    final cats = ref.watch(categoriesProvider).valueOrNull;
+    Category? cat;
+    if (cats != null) {
+      for (final c in cats) {
+        if (c.id == _suggestedCategoryId) {
+          cat = c;
+          break;
+        }
+      }
+    }
+    if (cat == null) return const SizedBox.shrink();
+    final c = cat;
+    return InkWell(
+      onTap: () => setState(() {
+        _categoryId = c.id;
+        _suggestedCategoryId = null;
+      }),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color:
+              Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome, size: 16, color: c.color),
+            const SizedBox(width: 6),
+            Text('Saran: ${c.name} — ketuk untuk pakai',
+                style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -261,6 +343,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                       labelText: 'Catatan (opsional)',
                       border: OutlineInputBorder(),
                     ),
+                    onChanged: _onNoteChanged,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -312,6 +395,55 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                 ),
               ],
             ),
+            if (_suggestedCategoryId != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _suggestionChip(),
+              ),
+            if (widget.edit == null &&
+                _type != TransactionType.transfer) ...[
+              const SizedBox(height: 4),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Jadwalkan'),
+                subtitle: const Text(
+                    'Belum jadi transaksi — catat saat sudah dibayar'),
+                value: _schedule,
+                onChanged: (v) => setState(() => _schedule = v),
+              ),
+              if (_schedule)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon:
+                            const Icon(Icons.calendar_today, size: 18),
+                        label: Text(
+                            'Jatuh tempo: ${_dueDate.day}/${_dueDate.month}/${_dueDate.year}'),
+                        onPressed: () async {
+                          final p = await showDatePicker(
+                            context: context,
+                            initialDate: _dueDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now()
+                                .add(const Duration(days: 365 * 3)),
+                          );
+                          if (p != null) {
+                            setState(() => _dueDate = p);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Ingatkan'),
+                    Switch(
+                      value: _remind,
+                      onChanged: (v) =>
+                          setState(() => _remind = v),
+                    ),
+                  ],
+                ),
+            ],
             if (_receiptPath != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),

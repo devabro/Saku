@@ -1,14 +1,18 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../logic/debt_logic.dart';
 import '../logic/health_score.dart';
 import '../logic/insight_engine.dart';
 import '../logic/money.dart';
+import '../logic/title_memory.dart';
 import '../logic/totals.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
+import '../models/debt.dart';
 import '../models/goal.dart';
 import '../models/recurring.dart';
 import '../models/transaction.dart';
+import '../models/upcoming.dart';
 import '../models/wallet.dart';
 import 'app_database.dart';
 import 'repository.dart';
@@ -61,19 +65,67 @@ class LocalRepository implements Repository {
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  @override
+  Future<void> deleteCategory(String id) async {
+    // Kategori bawaan tidak bisa dihapus.
+    if (id.startsWith('cat_') || id.startsWith('inc_')) return;
+    final db = await _db.database;
+    await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+  }
+
+  @override
+  Future<bool> isCategoryUsed(String id) async {
+    final db = await _db.database;
+    final r = await db.rawQuery(
+        'SELECT COUNT(*) AS n FROM transactions WHERE categoryId = ?',
+        [id]);
+    final r2 = await db.rawQuery(
+        'SELECT COUNT(*) AS n FROM recurrings WHERE categoryId = ?', [id]);
+    return ((r.first['n'] as num?)?.toInt() ?? 0) > 0 ||
+        ((r2.first['n'] as num?)?.toInt() ?? 0) > 0;
+  }
+
   // ============ Budget ============
 
   @override
   Future<List<Budget>> getBudgets(String month) async {
     final db = await _db.database;
-    final rows = await db.query('budgets', where: 'month = ?', whereArgs: [month]);
+    final rows =
+        await db.query('budgets', where: 'month = ?', whereArgs: [month]);
     return rows.map(Budget.fromMap).toList();
+  }
+
+  @override
+  Future<List<Budget>> getAllBudgets() async {
+    final db = await _db.database;
+    final rows = await db.query('budgets', orderBy: 'startMs DESC');
+    return rows.map(Budget.fromMap).toList();
+  }
+
+  @override
+  Future<void> deleteBudget(String id) async {
+    final db = await _db.database;
+    await db.delete('budgets', where: 'id = ?', whereArgs: [id]);
   }
 
   @override
   Future<void> saveBudget(Budget budget) async {
     final db = await _db.database;
-    await db.insert('budgets', budget.toMap(),
+    // Pastikan startMs/endMs selalu terisi agar UNIQUE konsisten.
+    var b = budget;
+    if (b.startMs == null || b.endMs == null) {
+      final r = b.range;
+      b = Budget(
+        id: b.id,
+        categoryId: b.categoryId,
+        month: b.month,
+        limit: b.limit,
+        periodType: b.periodType,
+        startMs: r.start.millisecondsSinceEpoch,
+        endMs: r.end.millisecondsSinceEpoch,
+      );
+    }
+    await db.insert('budgets', b.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -173,6 +225,10 @@ class LocalRepository implements Repository {
           conflictAlgorithm: ConflictAlgorithm.replace);
       await _applyBalances(txn, tx, 1);
     });
+    // Ingat judul -> kategori untuk auto-suggest berikutnya.
+    if (tx.categoryId != null && tx.note.trim().isNotEmpty) {
+      await rememberTitle(tx.note, tx.categoryId!);
+    }
   }
 
   @override
@@ -305,6 +361,152 @@ class LocalRepository implements Repository {
         return;
       }
     }
+  }
+
+  // ============ Utang-piutang ============
+
+  @override
+  Future<List<Debt>> getDebts() async {
+    final db = await _db.database;
+    final rows = await db.query('debts', orderBy: 'createdAt DESC');
+    return sortDebts(rows.map(Debt.fromMap).toList());
+  }
+
+  @override
+  Future<void> saveDebt(Debt debt) async {
+    final db = await _db.database;
+    await db.insert('debts', debt.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  @override
+  Future<void> deleteDebt(String id) async {
+    final db = await _db.database;
+    // Kembalikan efek saldo yang belum dilunasi.
+    await db.transaction((txn) async {
+      final rows =
+          await txn.query('debts', where: 'id = ?', whereArgs: [id]);
+      if (rows.isEmpty) return;
+      final d = Debt.fromMap(rows.first);
+      final net = d.kind == DebtKind.utang
+          ? d.totalAmount - d.paidAmount // utang: uang masuk saat buat
+          : -(d.totalAmount - d.paidAmount); // piutang: uang keluar saat buat
+      if (net != 0) {
+        await _bump(txn, d.walletId, net.abs(), net < 0, 1);
+      }
+      await txn.delete('debts', where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  @override
+  Future<void> createDebt(Debt debt) async {
+    final db = await _db.database;
+    await db.transaction((txn) async {
+      await txn.insert('debts', debt.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+      // Utang: uang MASUK ke dompet. Piutang: uang KELUAR dari dompet.
+      await _bump(txn, debt.walletId, debt.totalAmount,
+          debt.kind == DebtKind.piutang, 1);
+    });
+  }
+
+  @override
+  Future<bool> payDebt(String debtId, int amount, String walletId) async {
+    final db = await _db.database;
+    return db.transaction((txn) async {
+      final rows =
+          await txn.query('debts', where: 'id = ?', whereArgs: [debtId]);
+      if (rows.isEmpty) return false;
+      final d = Debt.fromMap(rows.first);
+      if (!isValidDebtPayment(d.totalAmount, d.paidAmount, amount)) {
+        return false;
+      }
+      // Bayar utang: uang KELUAR. Terima piutang: uang MASUK.
+      await _bump(
+          txn, walletId, amount, d.kind == DebtKind.utang, 1);
+      await txn.update(
+          'debts', {'paidAmount': d.paidAmount + amount},
+          where: 'id = ?', whereArgs: [debtId]);
+      return true;
+    });
+  }
+
+  // ============ Terjadwal (upcoming) ============
+
+  @override
+  Future<List<UpcomingTx>> getUpcoming() async {
+    final db = await _db.database;
+    final rows = await db.query('upcoming', orderBy: 'dueMs ASC');
+    return rows.map(UpcomingTx.fromMap).toList();
+  }
+
+  @override
+  Future<void> saveUpcoming(UpcomingTx item) async {
+    final db = await _db.database;
+    await db.insert('upcoming', item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  @override
+  Future<void> deleteUpcoming(String id) async {
+    final db = await _db.database;
+    await db.delete('upcoming', where: 'id = ?', whereArgs: [id]);
+  }
+
+  @override
+  Future<void> markUpcomingPaid(String id) async {
+    final db = await _db.database;
+    String? title;
+    String? categoryId;
+    await db.transaction((txn) async {
+      final rows =
+          await txn.query('upcoming', where: 'id = ?', whereArgs: [id]);
+      if (rows.isEmpty) return;
+      final u = UpcomingTx.fromMap(rows.first);
+      title = u.note;
+      categoryId = u.categoryId;
+      final tx = SakuTransaction(
+        id: newId(),
+        type: u.type,
+        amount: u.amount,
+        categoryId: u.categoryId,
+        walletId: u.walletId,
+        note: u.note,
+        date: DateTime.now(),
+      );
+      await txn.insert('transactions', tx.toMap());
+      await _applyBalances(txn, tx, 1);
+      await txn.delete('upcoming', where: 'id = ?', whereArgs: [id]);
+    });
+    if (title != null && categoryId != null) {
+      await rememberTitle(title!, categoryId!);
+    }
+  }
+
+  // ============ Memori judul ============
+
+  @override
+  Future<void> rememberTitle(String title, String categoryId) async {
+    final key = TitleMemory.normalize(title);
+    if (key.isEmpty) return;
+    final db = await _db.database;
+    await db.insert(
+        'title_memory',
+        {
+          'title': key,
+          'categoryId': categoryId,
+          'updatedAt': DateTime.now().millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  @override
+  Future<Map<String, String>> getTitleMemory() async {
+    final db = await _db.database;
+    final rows = await db.query('title_memory');
+    return {
+      for (final r in rows) (r['title'] as String): r['categoryId'] as String
+    };
   }
 
   // ============ Meta ============
