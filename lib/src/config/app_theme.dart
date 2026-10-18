@@ -1,45 +1,87 @@
 import 'package:flutter/material.dart';
 
-/// Tema aplikasi: dark-first (default), dengan opsi light mode.
-/// Warna aksen teal — netral, tidak seperti "template AI generik" yang
-/// biasanya ungu-biru gradient.
+/// Tema Saku: feminim yang sophisticated — warm cream + dusty rose,
+/// bukan "pink semua" yang kekanakan. Dua-duanya hangat:
+/// light = cream lembut, dark = charcoal kehangatan rose.
+/// Tanpa gradient, tanpa shadow bertumpuk: flat, bulat, elegan.
 class AppTheme {
   AppTheme._();
 
-  static const _seed = Color(0xFF14B8A6); // teal
+  // Dusty rose — primary light. Dewasa, lembut, tidak norak.
+  static const _roseLight = Color(0xFFC4707F);
+  // Soft rose — primary dark (lebih terang biar kebaca di gelap).
+  static const _roseDark = Color(0xFFE8A0AC);
 
-  static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(seedColor: _seed, brightness: Brightness.dark);
+  static const _creamBg = Color(0xFFFAF4EF);
+  static const _creamCard = Color(0xFFFFFBF8);
+  static const _warmDarkBg = Color(0xFF221B1E);
+  static const _warmDarkCard = Color(0xFF2D2428);
+
+  static const _radius = 24.0;
+
+  static ThemeData light() {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: _roseLight,
+      brightness: Brightness.light,
+    );
     return ThemeData(
       useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF0F1414),
+      colorScheme: scheme.copyWith(
+        surface: _creamCard,
+      ),
+      scaffoldBackgroundColor: _creamBg,
       cardTheme: const CardThemeData(
         margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        elevation: 0,
+        color: _creamCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(_radius)),
+        ),
       ),
       appBarTheme: const AppBarTheme(centerTitle: false),
       bottomSheetTheme: const BottomSheetThemeData(
         showDragHandle: true,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
   }
 
-  static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(seedColor: _seed, brightness: Brightness.light);
+  static ThemeData dark() {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: _roseDark,
+      brightness: Brightness.dark,
+    );
     return ThemeData(
       useMaterial3: true,
-      colorScheme: scheme,
+      colorScheme: scheme.copyWith(
+        surface: _warmDarkCard,
+      ),
+      scaffoldBackgroundColor: _warmDarkBg,
       cardTheme: const CardThemeData(
         margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        elevation: 0,
+        color: _warmDarkCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(_radius)),
+        ),
       ),
       appBarTheme: const AppBarTheme(centerTitle: false),
       bottomSheetTheme: const BottomSheetThemeData(
         showDragHandle: true,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );

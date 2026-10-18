@@ -108,11 +108,24 @@ class BudgetsScreen extends ConsumerWidget {
           _banner(context, Colors.orange,
               'Hampir habis: ${near.map((b) => names[b.categoryId] ?? '').join(', ')}'),
         if (budgets.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(24),
+          Padding(
+            padding: const EdgeInsets.all(32),
             child: Center(
-                child: Text(
-                    'Belum ada budget.\nPencet + buat bikin.')),
+                child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.pie_chart_outline_rounded,
+                    size: 48,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.6)),
+                const SizedBox(height: 12),
+                const Text(
+                    'Belum ada budget.\nPencet tombol + Budget di bawah\nbuat mulai atur pengeluaran.',
+                    textAlign: TextAlign.center),
+              ],
+            )),
           )
         else
           for (final b in sorted)
@@ -145,59 +158,116 @@ class BudgetsScreen extends ConsumerWidget {
   Widget _budgetTile(BuildContext context, WidgetRef ref, Budget b, int used,
       String name, IconData? icon, Color? color) {
     final ratio = BudgetPeriods.ratio(used, b.limit);
-    final barColor = ratio >= 1
-        ? Colors.red
+    final scheme = Theme.of(context).colorScheme;
+    final ringColor = ratio >= 1
+        ? scheme.error
         : ratio >= 0.8
-            ? Colors.orange
-            : Colors.green;
+            ? const Color(0xFFE8934A)
+            : const Color(0xFF4C8C6B);
     return Card(
-      child: ListTile(
-        leading: Icon(icon ?? Icons.category, color: color),
-        title: Text(name),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        child: Row(
           children: [
-            Text(b.periodLabel,
-                style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 6),
-            LinearProgressIndicator(
-              value: ratio.clamp(0.0, 1.0),
-              color: barColor,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
+            // Ring progres melingkar.
+            SizedBox(
+              width: 76,
+              height: 76,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 68,
+                    height: 68,
+                    child: CircularProgressIndicator(
+                      value: ratio.clamp(0.0, 1.0),
+                      strokeWidth: 9,
+                      strokeCap: StrokeCap.round,
+                      color: ringColor,
+                      backgroundColor:
+                          scheme.surfaceContainerHighest,
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('${(ratio * 100).round()}%',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: ringColor)),
+                      Icon(icon ?? Icons.category,
+                          size: 18, color: color),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 4),
-            Row(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(b.periodLabel,
+                      style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      MaskedAmount(used, short: true,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                  fontWeight: FontWeight.w600)),
+                      Text(' / ${formatIdrShort(b.limit)}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    ratio >= 1
+                        ? 'Jebol! Kurangi belanja di sini.'
+                        : ratio >= 0.8
+                            ? 'Hampir habis, hati-hati ya.'
+                            : 'Masih aman.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(color: ringColor),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                MaskedAmount(used, short: true),
-                Text(' / ${formatIdrShort(b.limit)}',
-                    style: const TextStyle(fontSize: 13)),
-                const Spacer(),
-                Text('${(ratio * 100).round()}%',
-                    style: TextStyle(
-                        color: barColor, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Ubah batas',
+                  onPressed: () => _editLimit(context, ref, b),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.red, size: 20),
+                  tooltip: 'Hapus budget',
+                  onPressed: () async {
+                    await ref
+                        .read(repositoryProvider)
+                        .deleteBudget(b.id);
+                    invalidateAll(ref);
+                  },
+                ),
               ],
-            ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Ubah batas',
-              onPressed: () => _editLimit(context, ref, b),
-            ),
-            IconButton(
-              icon:
-                  const Icon(Icons.delete_outline, color: Colors.red),
-              tooltip: 'Hapus budget',
-              onPressed: () async {
-                await ref
-                    .read(repositoryProvider)
-                    .deleteBudget(b.id);
-                invalidateAll(ref);
-              },
             ),
           ],
         ),

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/app_database.dart';
 import '../data/local_repository.dart';
 import '../data/repository.dart';
+import '../logic/budget_periods.dart';
 import '../logic/health_score.dart';
 import '../logic/insight_engine.dart';
 import '../logic/money.dart';
+import '../logic/streak.dart';
+import '../logic/weekly_report.dart';
 import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/debt.dart';
@@ -56,9 +59,9 @@ final privacyModeProvider =
   return _MetaBoolController(ref.watch(repositoryProvider), 'privacy_mode');
 });
 
-/// true = dark mode, false = light mode. Default: gelap.
+/// true = dark mode, false = light mode. Default: terang (cream).
 class ThemeModeController extends StateNotifier<bool> {
-  ThemeModeController(this._repo) : super(true);
+  ThemeModeController(this._repo) : super(false);
   final Repository _repo;
 
   Future<void> load() async {
@@ -163,6 +166,44 @@ final insightsProvider =
   return InsightEngine.analyze(inputs);
 });
 
+/// Streak: hari beruntun mencatat transaksi (non-transfer).
+/// Dihitung dari transaksi 60 hari terakhir — selalu akurat,
+/// tidak perlu disimpan terpisah.
+final streakProvider = FutureProvider<int>((ref) async {
+  final repo = ref.watch(repositoryProvider);
+  final now = DateTime.now();
+  final txs = await repo.getTransactions(
+    from: now.subtract(const Duration(days: 60)),
+    to: now,
+  );
+  return Streak.calc(
+    txs
+        .where((t) => t.type != TransactionType.transfer)
+        .map((t) => t.date)
+        .toList(),
+    now,
+  );
+});
+
+/// Laporan mingguan: belanja minggu ini vs minggu lalu.
+final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
+  final repo = ref.watch(repositoryProvider);
+  final now = DateTime.now();
+  final thisW = BudgetPeriods.rangeFor(BudgetPeriodType.weekly, now);
+  final lastW = BudgetPeriods.rangeFor(
+      BudgetPeriodType.weekly, now.subtract(const Duration(days: 7)));
+  final txs = await repo.getTransactions(from: lastW.start, to: thisW.end);
+  return WeeklyReport.compute(
+      txs, thisW.start, thisW.end, lastW.start, lastW.end);
+});
+
+/// Data contoh aktif? (meta-backed, seperti privacy mode).
+final sampleDataActiveProvider =
+    StateNotifierProvider<_MetaBoolController, bool>((ref) {
+  return _MetaBoolController(
+      ref.watch(repositoryProvider), 'sample_data_active');
+});
+
 /// Invalidate semua provider data setelah mutasi. Panggil ini dari UI
 /// setiap kali simpan/hapus transaksi, dompet, budget, goal, recurring.
 void invalidateAll(WidgetRef ref) {
@@ -179,4 +220,6 @@ void invalidateAll(WidgetRef ref) {
   ref.invalidate(netWorthProvider);
   ref.invalidate(healthProvider);
   ref.invalidate(insightsProvider);
+  ref.invalidate(streakProvider);
+  ref.invalidate(weeklyReportProvider);
 }

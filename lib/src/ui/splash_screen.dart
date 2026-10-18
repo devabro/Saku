@@ -36,6 +36,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     await ref.read(notifUpcomingProvider.notifier).load();
     await ref.read(notifDebtProvider.notifier).load();
     await ref.read(notifDailyProvider.notifier).load();
+    await ref.read(sampleDataActiveProvider.notifier).load();
     final done = (await repo.getMeta('onboarding_done')) == '1';
     if (done) {
       final n = await repo.generateDueRecurrings(DateTime.now());

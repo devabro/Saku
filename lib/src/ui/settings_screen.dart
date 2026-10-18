@@ -6,6 +6,8 @@ import '../logic/money.dart';
 import '../services/biometric_service.dart';
 import '../services/export_service.dart';
 import '../services/notification_service.dart';
+import '../services/sample_data_service.dart';
+import 'sample_data_actions.dart';
 import '../state/providers.dart';
 import 'categories_screen.dart';
 import 'recurrings_screen.dart';
@@ -48,7 +50,7 @@ class SettingsScreen extends ConsumerWidget {
           SwitchListTile(
             secondary: const Icon(Icons.dark_mode),
             title: const Text('Mode gelap'),
-            subtitle: const Text('Default: gelap'),
+            subtitle: const Text('Default: terang'),
             value: dark,
             onChanged: (_) =>
                 ref.read(themeModeProvider.notifier).toggle(),
@@ -137,6 +139,31 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Daftar dompet → file JSON'),
             onTap: () => _exportJson(context, ref),
           ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('Data contoh',
+                style: Theme.of(context).textTheme.titleSmall),
+          ),
+          if (!ref.watch(sampleDataActiveProvider))
+            ListTile(
+              leading: const Icon(Icons.science_outlined),
+              title: const Text('Coba dengan data contoh'),
+              subtitle: const Text(
+                  'Isi 2 bulan data dummy biar bisa eksplor. Bisa dihapus kapan aja.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _installSample(context, ref),
+            )
+          else
+            ListTile(
+              leading:
+                  const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Hapus data contoh',
+                  style: TextStyle(color: Colors.red)),
+              subtitle: const Text(
+                  'Hapus semua transaksi dummy beserta efeknya ke saldo.'),
+              onTap: () => _clearSample(context, ref),
+            ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info_outline),
@@ -235,5 +262,42 @@ class SettingsScreen extends ConsumerWidget {
     await ExportService.shareTextFile(
         '${AppConfig.appName.toLowerCase()}-dompet.json',
         ExportService.walletsToJson(wallets));
+  }
+
+  Future<void> _installSample(
+      BuildContext context, WidgetRef ref) =>
+      installSampleData(context, ref);
+
+  Future<void> _clearSample(
+      BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus data contoh?'),
+        content: const Text(
+            'Semua transaksi dummy akan dihapus dan saldo dompet dikembalikan seperti semula.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                  backgroundColor:
+                      Theme.of(ctx).colorScheme.error),
+              child: const Text('Hapus')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final n =
+        await SampleDataService.clear(ref.read(repositoryProvider));
+    await ref.read(sampleDataActiveProvider.notifier).set(false);
+    invalidateAll(ref);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text('$n transaksi contoh dihapus. Bersih!')));
+    }
   }
 }

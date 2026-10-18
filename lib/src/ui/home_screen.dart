@@ -9,6 +9,7 @@ import 'dashboard_screen.dart';
 import 'debts_screen.dart';
 import 'goals_screen.dart';
 import 'quick_add_sheet.dart';
+import 'sample_data_actions.dart';
 import 'settings_screen.dart';
 import 'transactions_screen.dart';
 import 'wallets_screen.dart';
@@ -24,14 +25,17 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _index = 0;
 
-  static const _tabs = [
-    DashboardScreen(),
-    TransactionsScreen(),
-    BudgetsScreen(),
-    GoalsScreen(),
-    WalletsScreen(),
-    DebtsScreen(),
-  ];
+  List<Widget> _tabs() => [
+        DashboardScreen(
+          onAdd: () => _quickAdd(),
+          onTrySample: () => installSampleData(context, ref),
+        ),
+        const TransactionsScreen(),
+        const BudgetsScreen(),
+        const GoalsScreen(),
+        const WalletsScreen(),
+        const DebtsScreen(),
+      ];
 
   void _quickAdd({TransactionType? type}) {
     showModalBottomSheet(
@@ -108,7 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      body: IndexedStack(index: _index, children: _tabs),
+      body: IndexedStack(index: _index, children: _tabs()),
       floatingActionButton: _fab(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

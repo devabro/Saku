@@ -115,11 +115,37 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
     if (filtered.isEmpty) {
       return Center(
-          child: Text(
-              _filter.isActive
-                  ? 'Tidak ada transaksi yang cocok filter.'
-                  : 'Belum ada transaksi.\nPencet "Catat" buat mulai.',
-              textAlign: TextAlign.center));
+          child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _filter.isActive
+                    ? Icons.search_off_rounded
+                    : Icons.receipt_long_rounded,
+                size: 36,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+                _filter.isActive
+                    ? 'Tidak ada transaksi yang cocok filter.\nCoba ubah katanya ya.'
+                    : 'Belum ada transaksi.\nPencet tombol + Catat di bawah buat mulai.',
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ));
     }
 
     // Kelompokkan per tanggal.
