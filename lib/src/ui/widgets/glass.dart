@@ -8,19 +8,19 @@ import 'package:flutter/material.dart';
 /// dan SATU hero card — sisanya kaca palsu (warna semi-transparan)
 /// agar tetap ringan.
 
-/// Isi kaca: putih 55% (terang) / putih 7% (gelap).
+/// Isi kaca: putih 55% (terang) / putih 12% (gelap) — dinaikkan biar berasa.
 Color sakuGlassFill(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   return dark
-      ? Colors.white.withValues(alpha: 0.07)
+      ? Colors.white.withValues(alpha: 0.12)
       : Colors.white.withValues(alpha: 0.55);
 }
 
-/// Border kaca: garis terang 1px pemberi definisi.
+/// Border kaca: garis terang pemberi definisi — dipertegas di dark mode.
 Color sakuGlassBorder(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   return dark
-      ? Colors.white.withValues(alpha: 0.14)
+      ? Colors.white.withValues(alpha: 0.28)
       : Colors.white.withValues(alpha: 0.7);
 }
 
@@ -38,9 +38,9 @@ class SakuBackdrop extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: dark
               ? const [
-                  Color(0xFF2C2126),
-                  Color(0xFF221B1E),
-                  Color(0xFF302228),
+                  Color(0xFF3A2530), // plum gelap
+                  Color(0xFF2A1E24), // dasar
+                  Color(0xFF40304A), // ungu-mawar gelap
                 ]
               : const [
                   Color(0xFFFFF8F3),
@@ -51,13 +51,13 @@ class SakuBackdrop extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Glow rose kanan-atas.
+          // Glow rose kanan-atas — diperkuat biar blur ada yang dibiaskan.
           Positioned(
             right: -70,
             top: -70,
             child: Container(
-              width: 240,
-              height: 240,
+              width: 280,
+              height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -65,7 +65,7 @@ class SakuBackdrop extends StatelessWidget {
                     (dark
                             ? const Color(0xFFE8A0B4)
                             : const Color(0xFFF3B8C6))
-                        .withValues(alpha: dark ? 0.16 : 0.35),
+                        .withValues(alpha: dark ? 0.35 : 0.35),
                     Colors.transparent,
                   ],
                 ),
@@ -77,8 +77,8 @@ class SakuBackdrop extends StatelessWidget {
             left: -80,
             bottom: -60,
             child: Container(
-              width: 260,
-              height: 260,
+              width: 300,
+              height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -86,7 +86,26 @@ class SakuBackdrop extends StatelessWidget {
                     (dark
                             ? const Color(0xFFC49A5F)
                             : const Color(0xFFE8C98F))
-                        .withValues(alpha: dark ? 0.12 : 0.28),
+                        .withValues(alpha: dark ? 0.28 : 0.28),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Glow rose tambahan tengah-kiri biar gradien hidup.
+          Positioned(
+            left: -100,
+            top: MediaQuery.of(context).size.height * 0.35,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFB76E8A)
+                        .withValues(alpha: dark ? 0.22 : 0.18),
                     Colors.transparent,
                   ],
                 ),
@@ -117,10 +136,19 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(24);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     Widget content = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: sakuGlassFill(context),
+        // Gradien vertikal: terang di atas (kilau kaca), gelap di bawah.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: dark ? 0.10 : 0.25),
+            sakuGlassFill(context),
+          ],
+        ),
         borderRadius: radius,
         border: Border.all(color: sakuGlassBorder(context), width: 1),
       ),
