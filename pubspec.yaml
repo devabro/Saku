@@ -39,6 +39,8 @@ dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/
 
 dev_dependencies:
   flutter_test:
