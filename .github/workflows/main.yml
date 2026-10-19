@@ -41,13 +41,13 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build release APK
-        run: flutter build apk --release
+      - name: Build debug APK
+        run: flutter build apk --debug --split-per-abi
 
       - name: Release APK
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
-          tag_name: release-${{ github.run_number }}
-          name: "Saku release #${{ github.run_number }}"
-          prerelease: false
-          files: build/app/outputs/flutter-apk/app-release.apk
+          tag_name: debug-${{ github.run_number }}
+          name: "Saku debug #${{ github.run_number }}"
+          prerelease: true
+          files: build/app/outputs/flutter-apk/app-*.apk
