@@ -1,4 +1,4 @@
-# Saku — aplikasi budgeting pribadi (local-first)
+# Saku — aplikasi budgeting pribadi
 
 Aplikasi budgeting Flutter untuk pemakaian pribadi. Terinspirasi fitur
 Budggt (multi-dompet, wizard budget, health score, target nabung) dan
