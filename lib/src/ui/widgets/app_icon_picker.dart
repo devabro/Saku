@@ -45,10 +45,7 @@ class _AppIconTileState extends State<AppIconTile> {
               height: 40,
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             )
-          : ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(_active.asset, width: 40, height: 40),
-            ),
+          : _IconBadge(option: _active),
       title: const Text('Ikon aplikasi'),
       subtitle: Text(_loading ? 'Memuat…' : _active.name),
       trailing: const Icon(Icons.chevron_right_rounded),
@@ -136,6 +133,46 @@ class _IconPickerSheet extends StatelessWidget {
   }
 }
 
+/// Badge ikon tanpa file gambar: lingkaran warna + inisial.
+/// (Thumbnail PNG via asset korup saat push, jadi digambar manual.)
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({required this.option, this.size = 40});
+  final AppIconOption option;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = {
+      'a': [const Color(0xFFE8A0B4), const Color(0xFF4A2C3A)],
+      'b': [const Color(0xFFC49A5F), const Color(0xFF4A2C3A)],
+      'c': [const Color(0xFFB76E8A), const Color(0xFFFFF7F1)],
+    };
+    final c = colors[option.id] ?? colors['a']!;
+    final label = {'a': 'S', 'b': '☽', 'c': 'A'}[option.id] ?? 'S';
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [c[0], c[0].withValues(alpha: 0.7)],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          color: c[1],
+          fontSize: size * 0.45,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
 class _IconCard extends StatelessWidget {
   const _IconCard({
     required this.option,
@@ -168,10 +205,7 @@ class _IconCard extends StatelessWidget {
           ),
           child: Column(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(option.asset, width: 64, height: 64),
-              ),
+              _IconBadge(option: option, size: 64),
               const SizedBox(height: 8),
               Text(
                 option.name,
