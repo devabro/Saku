@@ -11,7 +11,6 @@ import 'sample_data_actions.dart';
 import '../state/providers.dart';
 import 'categories_screen.dart';
 import 'recurrings_screen.dart';
-import 'widgets/app_icon_picker.dart';
 import 'widgets/glass.dart';
 
 /// Pengaturan: privasi, biometrik, tema, notifikasi, kategori,
@@ -64,7 +63,6 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: (_) =>
                       ref.read(themeModeProvider.notifier).toggle(),
                 ),
-                const AppIconTile(),
               ],
             ),
           ),
