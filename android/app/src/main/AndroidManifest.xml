@@ -28,33 +28,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Activity-alias untuk ganti ikon aplikasi dari dalam app.
-             Ikon A (default): MainActivity pakai @mipmap/ic_launcher.
-             Ikon B/C: alias ini, diaktifkan via PackageManager. -->
-        <activity-alias
-            android:name=".IconB"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_b"
-            android:label="Saku"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconC"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_c"
-            android:label="Saku"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
