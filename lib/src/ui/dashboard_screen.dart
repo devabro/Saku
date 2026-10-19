@@ -14,6 +14,7 @@ import '../logic/weekly_report.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../state/providers.dart';
+import 'widgets/glass.dart';
 import 'widgets/masked_amount.dart';
 
 /// Beranda: sapaan hangat, ringkasan bulan, streak, laporan mingguan,
@@ -115,8 +116,8 @@ class DashboardScreen extends ConsumerWidget {
     final net = t.income - t.expense;
     final netColor = net >= 0 ? const Color(0xFF4C8C6B) : scheme.error;
 
-    return Card(
-      color: scheme.primaryContainer,
+    return GlassHeroPanel(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -313,7 +314,8 @@ class DashboardScreen extends ConsumerWidget {
       icon = Icons.trending_up_rounded;
       tint = const Color(0xFFC4707F);
     }
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -369,7 +371,8 @@ class DashboardScreen extends ConsumerWidget {
         : h.score >= 40
             ? const Color(0xFFE8934A)
             : scheme.error;
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -487,7 +490,8 @@ class DashboardScreen extends ConsumerWidget {
     final names = {for (final c in categories) c.id: c.name};
     final colors = {for (final c in categories) c.id: c.color};
 
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -699,7 +703,8 @@ class DashboardScreen extends ConsumerWidget {
       spots.add(FlSpot(d.toDouble(), acc.toDouble()));
     }
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -755,7 +760,8 @@ class DashboardScreen extends ConsumerWidget {
       List<SakuTransaction> prev) {
     final t = totalsExcludingTransfers(now);
     final p = totalsExcludingTransfers(prev);
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -855,7 +861,8 @@ class DashboardScreen extends ConsumerWidget {
       }
     }
 
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -977,7 +984,8 @@ class _LoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return const GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Center(child: CircularProgressIndicator()),
@@ -992,7 +1000,8 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Text('Gagal memuat: $message'),

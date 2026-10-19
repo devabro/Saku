@@ -8,6 +8,7 @@ import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../state/providers.dart';
+import 'widgets/glass.dart';
 import 'widgets/masked_amount.dart';
 
 /// Budget per kategori per periode (mingguan/bulanan/rentang khusus).
@@ -164,7 +165,8 @@ class BudgetsScreen extends ConsumerWidget {
         : ratio >= 0.8
             ? const Color(0xFFE8934A)
             : const Color(0xFF4C8C6B);
-    return Card(
+    return GlassCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding:
             const EdgeInsets.symmetric(horizontal: 8, vertical: 12),

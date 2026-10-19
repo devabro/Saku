@@ -215,15 +215,27 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     final categories = ref.watch(categoriesProvider);
     final wallets = ref.watch(walletsProvider);
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Container(
+      decoration: BoxDecoration(
+        // Kaca buram: hampir opak agar teks tetap terbaca.
+        color: scheme.surface.withValues(alpha: 0.94),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottom),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Text(widget.edit == null ? 'Catat transaksi' : 'Ubah transaksi',
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
@@ -481,6 +493,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

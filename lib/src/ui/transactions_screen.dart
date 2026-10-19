@@ -231,6 +231,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
                     builder: (_) => QuickAddSheet(edit: t),
                   ).then((saved) {
                     if (saved == true) invalidateAll(ref);

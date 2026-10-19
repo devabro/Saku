@@ -13,8 +13,10 @@ import 'sample_data_actions.dart';
 import 'settings_screen.dart';
 import 'transactions_screen.dart';
 import 'wallets_screen.dart';
+import 'widgets/glass.dart';
 
-/// Navigasi utama: 6 tab + FAB quick-add.
+/// Navigasi utama: Liquid Glass — top bar & dock melayang di atas
+/// gradien lembut. 6 tab + FAB quick-add.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,6 +26,15 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _index = 0;
+
+  static const _dockItems = [
+    DockItem(icon: Icons.dashboard_rounded, label: 'Beranda'),
+    DockItem(icon: Icons.receipt_long_rounded, label: 'Transaksi'),
+    DockItem(icon: Icons.pie_chart_rounded, label: 'Budget'),
+    DockItem(icon: Icons.flag_rounded, label: 'Target'),
+    DockItem(icon: Icons.wallet_rounded, label: 'Dompet'),
+    DockItem(icon: Icons.handshake_rounded, label: 'Utang'),
+  ];
 
   List<Widget> _tabs() => [
         DashboardScreen(
@@ -41,6 +52,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => QuickAddSheet(initialType: type),
     ).then((saved) {
       if (saved == true) invalidateAll(ref);
@@ -56,7 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             await showBudgetEditor(context, ref, null);
             invalidateAll(ref);
           },
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add_rounded),
           label: const Text('Budget'),
         );
       case 3:
@@ -65,26 +77,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             await showGoalEditor(context, ref, null);
             invalidateAll(ref);
           },
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add_rounded),
           label: const Text('Target'),
         );
       case 4:
         return FloatingActionButton.extended(
-          onPressed: () =>
-              _quickAdd(type: TransactionType.transfer),
-          icon: const Icon(Icons.swap_horiz),
+          onPressed: () => _quickAdd(type: TransactionType.transfer),
+          icon: const Icon(Icons.swap_horiz_rounded),
           label: const Text('Transfer'),
         );
       case 5:
         return FloatingActionButton.extended(
           onPressed: () => showDebtEditor(context, ref),
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add_rounded),
           label: const Text('Utang'),
         );
       default:
         return FloatingActionButton.extended(
           onPressed: () => _quickAdd(),
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add_rounded),
           label: const Text('Catat'),
         );
     }
@@ -93,56 +104,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final privacy = ref.watch(privacyModeProvider);
+    final topPad = MediaQuery.of(context).padding.top + 60;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppConfig.appName),
-        actions: [
-          IconButton(
-            tooltip: privacy ? 'Tampilkan saldo' : 'Sembunyikan saldo',
-            icon: Icon(privacy ? Icons.visibility_off : Icons.visibility),
-            onPressed: () =>
-                ref.read(privacyModeProvider.notifier).toggle(),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
+        children: [
+          const SakuBackdrop(),
+          Positioned.fill(
+            child: Padding(
+              // Ruang untuk top bar melayang + dock melayang.
+              padding: EdgeInsets.only(top: topPad, bottom: 96),
+              child: IndexedStack(index: _index, children: _tabs()),
+            ),
           ),
-          IconButton(
-            tooltip: 'Pengaturan',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassTopBar(
+              title: AppConfig.appName,
+              actions: [
+                IconButton(
+                  tooltip:
+                      privacy ? 'Tampilkan saldo' : 'Sembunyikan saldo',
+                  icon: Icon(privacy
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded),
+                  onPressed: () =>
+                      ref.read(privacyModeProvider.notifier).toggle(),
+                ),
+                IconButton(
+                  tooltip: 'Pengaturan',
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const SettingsScreen()),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      body: IndexedStack(index: _index, children: _tabs()),
       floatingActionButton: _fab(),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: 'Beranda'),
-          NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long),
-              label: 'Transaksi'),
-          NavigationDestination(
-              icon: Icon(Icons.pie_chart_outline),
-              selectedIcon: Icon(Icons.pie_chart),
-              label: 'Budget'),
-          NavigationDestination(
-              icon: Icon(Icons.flag_outlined),
-              selectedIcon: Icon(Icons.flag),
-              label: 'Target'),
-          NavigationDestination(
-              icon: Icon(Icons.wallet_outlined),
-              selectedIcon: Icon(Icons.wallet),
-              label: 'Dompet'),
-          NavigationDestination(
-              icon: Icon(Icons.handshake_outlined),
-              selectedIcon: Icon(Icons.handshake),
-              label: 'Utang'),
-        ],
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: GlassDock(
+            items: _dockItems,
+            selected: _index,
+            onTap: (i) => setState(() => _index = i),
+          ),
+        ),
       ),
     );
   }

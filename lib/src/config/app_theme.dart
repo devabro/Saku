@@ -45,10 +45,8 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        shape: StadiumBorder(),
       ),
     );
   }
@@ -79,10 +77,8 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        shape: StadiumBorder(),
       ),
     );
   }
