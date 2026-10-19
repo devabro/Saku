@@ -1,4 +1,4 @@
-name: Build debug APK
+name: Build release APK
 
 on:
   push:
@@ -44,8 +44,8 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Build release APK
+        run: flutter build apk --release
 
       - name: Release APK
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
@@ -53,4 +53,4 @@ jobs:
           tag_name: debug-${{ github.run_number }}
           name: "Saku debug #${{ github.run_number }}"
           prerelease: true
-          files: build/app/outputs/flutter-apk/app-debug.apk
+          files: build/app/outputs/flutter-apk/app-release.apk
