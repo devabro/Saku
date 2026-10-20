@@ -91,8 +91,6 @@ class NotificationService {
   /// Jalankan semua aturan notifikasi yang aktif. Dipanggil saat aplikasi
   /// dibuka (splash). Mengembalikan jumlah notifikasi yang ditampilkan.
   Future<int> checkAndNotify(Repository repo, DateTime now) async {
-    final enabled = await repo.getMeta('notif_enabled') != '0';
-    if (!enabled) return 0;
     var shown = 0;
 
     if (await repo.getMeta('notif_budget') != '0') {
@@ -146,6 +144,12 @@ class NotificationService {
       await show(a);
       done.add(a.id);
     }
+    // Prune: hapus ID budget yang sudah tidak ada biar nggak numpuk.
+    final validIds = {
+      for (final b in budgets) '${b.id}@80',
+      for (final b in budgets) '${b.id}@100',
+    };
+    done.retainWhere(validIds.contains);
     await repo.setMeta('notif_budget_done', done.join(','));
     return alerts.length;
   }
