@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/money.dart';
 import '../models/wallet.dart';
 import '../state/providers.dart';
+import 'widgets/glass.dart';
 import 'widgets/masked_amount.dart';
 
 /// Dialog tambah/ubah dompet. Top-level agar bisa dipakai ulang.
@@ -86,7 +87,7 @@ class WalletsScreen extends ConsumerWidget {
             list.where((w) => w.isDebt).fold(0, (a, w) => a + w.balance);
         return ListView(
           children: [
-            Card(
+            GlassCard(
               child: ListTile(
                 title: const Text('Ringkasan'),
                 subtitle: Text(
@@ -116,7 +117,7 @@ class WalletsScreen extends ConsumerWidget {
   }
 
   Widget _walletTile(BuildContext context, WidgetRef ref, Wallet w) {
-    return Card(
+    return GlassCard(
       child: ListTile(
         leading: Icon(_icon(w.type),
             color: w.isDebt ? Colors.red : Colors.green),
@@ -164,12 +165,31 @@ class WalletsScreen extends ConsumerWidget {
 
   Future<void> _deleteWallet(
       BuildContext context, WidgetRef ref, Wallet w) async {
+    // Cegah hapus dompet yang masih dipakai transaksi.
+    final used =
+        await ref.read(repositoryProvider).isWalletUsed(w.id);
+    if (!context.mounted) return;
+    if (used) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Tidak bisa dihapus'),
+          content: Text(
+              '"${w.name}" masih dipakai transaksi. Hapus atau pindahkan dulu transaksinya.'),
+          actions: [
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Mengerti')),
+          ],
+        ),
+      );
+      return;
+    }
     final ok = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Hapus dompet?'),
-            content: Text(
-                '"${w.name}" dihapus. Transaksi yang memakai dompet ini tetap ada tapi dompetnya jadi "-" di daftar.'),
+            content: Text('"${w.name}" akan dihapus permanen.'),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
