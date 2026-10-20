@@ -18,6 +18,9 @@ abstract class Repository {
   Future<void> saveWallet(Wallet wallet);
   Future<void> deleteWallet(String id);
 
+  /// true jika ada transaksi yang memakai dompet [id].
+  Future<bool> isWalletUsed(String id);
+
   // --- Kategori ---
   Future<List<Category>> getCategories({CategoryKind? kind});
   Future<void> saveCategory(Category category);

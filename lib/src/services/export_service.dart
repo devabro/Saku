@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -42,15 +43,15 @@ class ExportService {
   }
 
   static String walletsToJson(List<Wallet> wallets) {
-    final b = StringBuffer()..writeln('[');
-    for (var i = 0; i < wallets.length; i++) {
-      final w = wallets[i];
-      b.writeln('  {"id": "${w.id}", "name": "${w.name}", '
-          '"type": "${w.type.name}", "balance": ${w.balance}}'
-          '${i < wallets.length - 1 ? ',' : ''}');
-    }
-    b.writeln(']');
-    return b.toString();
+    return jsonEncode([
+      for (final w in wallets)
+        {
+          'id': w.id,
+          'name': w.name,
+          'type': w.type.name,
+          'balance': w.balance,
+        }
+    ]);
   }
 
   /// Tulis [content] ke file temporer lalu buka share sheet.

@@ -44,6 +44,15 @@ class LocalRepository implements Repository {
     await db.delete('wallets', where: 'id = ?', whereArgs: [id]);
   }
 
+  @override
+  Future<bool> isWalletUsed(String id) async {
+    final db = await _db.database;
+    final r = await db.rawQuery(
+        'SELECT COUNT(*) AS n FROM transactions WHERE walletId = ?',
+        [id]);
+    return ((r.first['n'] as num?)?.toInt() ?? 0) > 0;
+  }
+
   // ============ Kategori ============
 
   @override
@@ -382,15 +391,16 @@ class LocalRepository implements Repository {
   @override
   Future<void> deleteDebt(String id) async {
     final db = await _db.database;
-    // Kembalikan efek saldo yang belum dilunasi.
+    // Kembalikan efek saldo saat pembuatan. Pembayaran yang sudah
+    // dilakukan tidak dibalik — itu fakta historis (uang sudah pindah).
     await db.transaction((txn) async {
       final rows =
           await txn.query('debts', where: 'id = ?', whereArgs: [id]);
       if (rows.isEmpty) return;
       final d = Debt.fromMap(rows.first);
       final net = d.kind == DebtKind.utang
-          ? d.totalAmount - d.paidAmount // utang: uang masuk saat buat
-          : -(d.totalAmount - d.paidAmount); // piutang: uang keluar saat buat
+          ? d.totalAmount // utang: uang masuk saat buat → kembalikan keluar
+          : -d.totalAmount; // piutang: uang keluar saat buat → kembalikan masuk
       if (net != 0) {
         await _bump(txn, d.walletId, net.abs(), net < 0, 1);
       }
